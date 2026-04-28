@@ -1,21 +1,17 @@
 {
-  "name": "oido-gmail",
+  "name": "oido-rustfs",
   "version": "1.0.0",
-  "description": "Send, receive, and search emails via IMAP/SMTP using MCP server.",
+  "description": "Read files from RustFS object storage and inject their text content into the LLM context.",
   "runtime": "make build",
   "mcpServers": {
-    "oido-gmail": {
-      "command": "${extensionPath}/oido-gmail-mcp",
+    "oido-rustfs": {
+      "command": "${extensionPath}/oido-rustfs-mcp",
       "args": [],
       "env": {
-        "GMAIL_EMAIL": "${GMAIL_EMAIL}",
-        "GMAIL_PASSWORD": "${GMAIL_PASSWORD}",
-        "GMAIL_IMAP_HOST": "${GMAIL_IMAP_HOST}",
-        "GMAIL_IMAP_PORT": "${GMAIL_IMAP_PORT}",
-        "GMAIL_SMTP_HOST": "${GMAIL_SMTP_HOST}",
-        "GMAIL_SMTP_PORT": "${GMAIL_SMTP_PORT}",
-        "GMAIL_ALLOW_SEND": "${GMAIL_ALLOW_SEND}",
-        "GMAIL_ALLOW_RECEIVE": "${GMAIL_ALLOW_RECEIVE}"
+        "RUSTFS_BASE_URL": "${RUSTFS_BASE_URL}",
+        "RUSTFS_ACCESS_KEY": "${RUSTFS_ACCESS_KEY}",
+        "RUSTFS_SECRET_KEY": "${RUSTFS_SECRET_KEY}",
+        "RUSTFS_BUCKET": "${RUSTFS_BUCKET}"
       }
     }
   },
@@ -23,52 +19,28 @@
   "excludeTools": [],
   "settings": [
     {
-      "name": "GMAIL_EMAIL",
-      "description": "Email address for IMAP/SMTP authentication",
+      "name": "RUSTFS_BASE_URL",
+      "description": "RustFS server base URL (e.g. http://localhost:9000)",
       "defaultValue": "",
       "type": "string"
     },
     {
-      "name": "GMAIL_PASSWORD",
-      "description": "App password for IMAP/SMTP authentication (use Gmail App Password, not account password)",
+      "name": "RUSTFS_ACCESS_KEY",
+      "description": "RustFS access key",
       "defaultValue": "",
       "type": "string"
     },
     {
-      "name": "GMAIL_IMAP_HOST",
-      "description": "IMAP server host",
-      "defaultValue": "imap.gmail.com",
+      "name": "RUSTFS_SECRET_KEY",
+      "description": "RustFS secret key",
+      "defaultValue": "",
       "type": "string"
     },
     {
-      "name": "GMAIL_IMAP_PORT",
-      "description": "IMAP server port",
-      "defaultValue": "993",
+      "name": "RUSTFS_BUCKET",
+      "description": "Allowed buckets (comma-separated). Default bucket is first in list.",
+      "defaultValue": "chat-attachments",
       "type": "string"
-    },
-    {
-      "name": "GMAIL_SMTP_HOST",
-      "description": "SMTP server host",
-      "defaultValue": "smtp.gmail.com",
-      "type": "string"
-    },
-    {
-      "name": "GMAIL_SMTP_PORT",
-      "description": "SMTP server port",
-      "defaultValue": "587",
-      "type": "string"
-    },
-    {
-      "name": "GMAIL_ALLOW_SEND",
-      "description": "Allow sending emails via SMTP",
-      "defaultValue": "false",
-      "type": "bool"
-    },
-    {
-      "name": "GMAIL_ALLOW_RECEIVE",
-      "description": "Allow reading/receiving emails via IMAP",
-      "defaultValue": "true",
-      "type": "bool"
     }
   ]
 }
