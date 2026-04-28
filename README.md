@@ -53,15 +53,15 @@ Set the following environment variables (or configure via plugin settings):
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RUSTFS_BASE_URL` | Server URL (e.g. `http://localhost:9000`) | *(required)* |
-| `RUSTFS_ACCESS_KEY` | Access key | *(required)* |
-| `RUSTFS_SECRET_KEY` | Secret key | *(required)* |
-| `RUSTFS_BUCKET` | Allowed buckets, comma-separated. First = default. | `chat-attachments` |
+| `OIDO_RUSTFS_BASE_URL` | Server URL (e.g. `http://localhost:9000`) | *(required)* |
+| `OIDO_RUSTFS_ACCESS_KEY` | Access key | *(required)* |
+| `OIDO_RUSTFS_SECRET_KEY` | Secret key | *(required)* |
+| `OIDO_RUSTFS_BUCKET` | Allowed buckets, comma-separated. First = default. | `chat-attachments` |
 
 ### 3. Multiple Buckets
 
 ```bash
-RUSTFS_BUCKET=chat-attachments,uploads,documents
+OIDO_RUSTFS_BUCKET=chat-attachments,uploads,documents
 ```
 
 The first bucket is the default. Pass `bucket` in the tool call to override.

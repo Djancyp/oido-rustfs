@@ -15,22 +15,22 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	baseURL := os.Getenv("RUSTFS_BASE_URL")
+	baseURL := os.Getenv("OIDO_RUSTFS_BASE_URL")
 	if baseURL == "" {
-		return nil, fmt.Errorf("RUSTFS_BASE_URL is required")
+		return nil, fmt.Errorf("OIDO_RUSTFS_BASE_URL is required")
 	}
 
-	accessKey := os.Getenv("RUSTFS_ACCESS_KEY")
+	accessKey := os.Getenv("OIDO_RUSTFS_ACCESS_KEY")
 	if accessKey == "" {
-		return nil, fmt.Errorf("RUSTFS_ACCESS_KEY is required")
+		return nil, fmt.Errorf("OIDO_RUSTFS_ACCESS_KEY is required")
 	}
 
-	secretKey := os.Getenv("RUSTFS_SECRET_KEY")
+	secretKey := os.Getenv("OIDO_RUSTFS_SECRET_KEY")
 	if secretKey == "" {
-		return nil, fmt.Errorf("RUSTFS_SECRET_KEY is required")
+		return nil, fmt.Errorf("OIDO_RUSTFS_SECRET_KEY is required")
 	}
 
-	bucketEnv := os.Getenv("RUSTFS_BUCKET")
+	bucketEnv := os.Getenv("OIDO_RUSTFS_BUCKET")
 	if bucketEnv == "" {
 		bucketEnv = "chat-attachments"
 	}

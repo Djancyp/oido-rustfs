@@ -9,7 +9,7 @@ Fetch a file from RustFS by storage key and return its extracted text content.
 
 **Parameters:**
 - `key` (string, required): Storage key of the file (e.g. `main.go`, `report.pdf`)
-- `bucket` (string, optional): Bucket to read from. Defaults to first bucket in `RUSTFS_BUCKET`.
+- `bucket` (string, optional): Bucket to read from. Defaults to first bucket in `OIDO_RUSTFS_BUCKET`.
 
 **Supported formats:** txt, md, csv, pdf, docx, xlsx, json, yaml, toml, xml, html, and most plain-text source files.
 
@@ -38,8 +38,8 @@ package main
 
 ## Notes
 
-- **Default bucket**: `chat-attachments` (first value in `RUSTFS_BUCKET`)
-- **Multiple buckets**: Set `RUSTFS_BUCKET=bucket1,bucket2` — first is default, all are allowed
+- **Default bucket**: `chat-attachments` (first value in `OIDO_RUSTFS_BUCKET`)
+- **Multiple buckets**: Set `OIDO_RUSTFS_BUCKET=bucket1,bucket2` — first is default, all are allowed
 - **Large files**: Content truncated at 4M characters with a notice
 - **Binary formats**: `.doc` and `.xls` (legacy Office) not supported — convert to `.docx`/`.xlsx`
 
@@ -47,7 +47,7 @@ package main
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RUSTFS_BASE_URL` | RustFS server URL (e.g. `http://localhost:9000`) | *(required)* |
-| `RUSTFS_ACCESS_KEY` | Access key | *(required)* |
-| `RUSTFS_SECRET_KEY` | Secret key | *(required)* |
-| `RUSTFS_BUCKET` | Allowed buckets, comma-separated | `chat-attachments` |
+| `OIDO_RUSTFS_BASE_URL` | RustFS server URL (e.g. `http://localhost:9000`) | *(required)* |
+| `OIDO_RUSTFS_ACCESS_KEY` | Access key | *(required)* |
+| `OIDO_RUSTFS_SECRET_KEY` | Secret key | *(required)* |
+| `OIDO_RUSTFS_BUCKET` | Allowed buckets, comma-separated | `chat-attachments` |

@@ -8,10 +8,10 @@
       "command": "${extensionPath}/oido-rustfs-mcp",
       "args": [],
       "env": {
-        "RUSTFS_BASE_URL": "${RUSTFS_BASE_URL}",
-        "RUSTFS_ACCESS_KEY": "${RUSTFS_ACCESS_KEY}",
-        "RUSTFS_SECRET_KEY": "${RUSTFS_SECRET_KEY}",
-        "RUSTFS_BUCKET": "${RUSTFS_BUCKET}"
+        "OIDO_RUSTFS_BASE_URL": "${OIDO_RUSTFS_BASE_URL}",
+        "OIDO_RUSTFS_ACCESS_KEY": "${OIDO_RUSTFS_ACCESS_KEY}",
+        "OIDO_RUSTFS_SECRET_KEY": "${OIDO_RUSTFS_SECRET_KEY}",
+        "OIDO_RUSTFS_BUCKET": "${OIDO_RUSTFS_BUCKET}"
       }
     }
   },
@@ -19,25 +19,25 @@
   "excludeTools": [],
   "settings": [
     {
-      "name": "RUSTFS_BASE_URL",
+      "name": "OIDO_RUSTFS_BASE_URL",
       "description": "RustFS server base URL (e.g. http://localhost:9000)",
       "defaultValue": "",
       "type": "string"
     },
     {
-      "name": "RUSTFS_ACCESS_KEY",
+      "name": "OIDO_RUSTFS_ACCESS_KEY",
       "description": "RustFS access key",
       "defaultValue": "",
       "type": "string"
     },
     {
-      "name": "RUSTFS_SECRET_KEY",
+      "name": "OIDO_RUSTFS_SECRET_KEY",
       "description": "RustFS secret key",
       "defaultValue": "",
       "type": "string"
     },
     {
-      "name": "RUSTFS_BUCKET",
+      "name": "OIDO_RUSTFS_BUCKET",
       "description": "Allowed buckets (comma-separated). Default bucket is first in list.",
       "defaultValue": "chat-attachments",
       "type": "string"
