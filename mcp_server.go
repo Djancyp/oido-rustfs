@@ -38,7 +38,7 @@ func RunMCPServer() {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "rustfs_read_file",
-		Description: "Read a file from RustFS object storage and return its text content. Supports txt, md, csv, pdf, docx, xlsx, and most plain-text formats.",
+		Description: "Read a file from Attached files with storage key RustFS object storage and return its text content. Supports txt, md, csv, pdf, docx, xlsx, and most plain-text formats.",
 	}, handler.HandleReadFile)
 
 	ctx := context.Background()
