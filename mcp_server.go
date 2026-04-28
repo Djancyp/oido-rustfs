@@ -56,18 +56,25 @@ func (h *MCPHandler) HandleReadFile(ctx context.Context, _ *mcp.ServerSession, p
 		return errResult("key parameter is required"), nil
 	}
 
-	bucket := args.Bucket
-	if bucket == "" {
-		bucket = h.cfg.DefaultBucket
+	// If bucket explicitly specified, try that one only.
+	buckets := h.cfg.Buckets
+	if args.Bucket != "" {
+		buckets = []string{args.Bucket}
 	}
 
-	if !h.cfg.IsAllowedBucket(bucket) {
-		return errResult(fmt.Sprintf("bucket %q not in allowed list: %v", bucket, h.cfg.Buckets)), nil
+	var data []byte
+	var foundBucket string
+	for _, bucket := range buckets {
+		d, err := h.storage.GetObject(ctx, bucket, args.Key)
+		if err == nil {
+			data = d
+			foundBucket = bucket
+			break
+		}
 	}
 
-	data, err := h.storage.GetObject(ctx, bucket, args.Key)
-	if err != nil {
-		return errResult(fmt.Sprintf("failed to fetch %s/%s: %v", bucket, args.Key, err)), nil
+	if foundBucket == "" {
+		return errResult(fmt.Sprintf("%q not found in any bucket: %v", args.Key, h.cfg.Buckets)), nil
 	}
 
 	text, err := ExtractText(data, args.Key)
@@ -75,7 +82,7 @@ func (h *MCPHandler) HandleReadFile(ctx context.Context, _ *mcp.ServerSession, p
 		return errResult(fmt.Sprintf("failed to extract text from %s: %v", args.Key, err)), nil
 	}
 
-	result := fmt.Sprintf("File: %s (bucket: %s)\n\n%s", args.Key, bucket, text)
+	result := fmt.Sprintf("File: %s (bucket: %s)\n\n%s", args.Key, foundBucket, text)
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
