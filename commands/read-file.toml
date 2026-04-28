@@ -1,0 +1,12 @@
+name = "read-file"
+description = "Read a file from RustFS storage and show its content. Auto-triggers when the user message contains 'Attached files: - <filename> (storage key: <key>)'."
+
+prompt = """
+Read the file with storage key {{key}} using the rustfs_read_file tool.
+If bucket is provided, pass it as the bucket parameter.
+Show the full file content returned.
+"""
+
+[parameters]
+key = { type = "string", description = "Storage key of the file to read (e.g. main.go, report.pdf)", required = true }
+bucket = { type = "string", description = "Bucket to read from (optional, defaults to first configured bucket)", required = false }
