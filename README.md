@@ -1,12 +1,14 @@
 # Oido RustFS MCP Extension
 
-Read files from RustFS object storage and inject their text content into the LLM context.
+Read and write files to RustFS object storage, injecting their text content into the LLM context.
 
 ## Features
 
-- **File Reading**: Fetch any file from RustFS by storage key
+- **File Reading**: Fetch any file from RustFS by storage key, auto-triggered when user attaches a file
+- **File Uploading**: Save LLM-generated content directly to RustFS storage
 - **Text Extraction**: Automatic extraction for PDF, DOCX, XLSX, and plain-text formats
 - **Multi-bucket**: Support multiple buckets with a configurable default
+- **Bucket Fallback**: Read searches all configured buckets in order — no need to specify one
 - **Large File Handling**: Truncates at 4M characters (~1M tokens) with a notice
 
 ## Installation
@@ -64,7 +66,7 @@ Set the following environment variables (or configure via plugin settings):
 OIDO_RUSTFS_BUCKET=chat-attachments,uploads,documents
 ```
 
-The first bucket is the default. Pass `bucket` in the tool call to override.
+The first bucket is the default. Read searches all buckets in order; upload targets the default unless overridden.
 
 ## Build
 
@@ -80,20 +82,25 @@ make dist
 
 Creates `dist/oido-rustfs.zip` for upload via the Plugins UI.
 
-## Tool
+## Tools
 
 ### `rustfs_read_file`
 
 Fetch a file from RustFS by storage key and return its extracted text content.
 
+**Auto-triggers** when the user message contains an attached file reference:
+```
+Attached files: - main.go (storage key: main.go)
+```
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `key` | string | yes | Storage key (e.g. `main.go`, `report.pdf`) |
-| `bucket` | string | no | Bucket override (must be in allowed list) |
+| `key` | string | yes | Storage key (e.g. `main.go`, `reports/q1.pdf`) |
+| `bucket` | string | no | Specific bucket to read from. If omitted, searches all configured buckets in order. |
 
-**Supported formats:**
+**Supported read formats:**
 
 | Format | Extensions |
 |--------|-----------|
@@ -103,6 +110,29 @@ Fetch a file from RustFS by storage key and return its extracted text content.
 | Excel | xlsx |
 
 > **Note:** Legacy `.doc` and `.xls` formats are not supported. Convert to `.docx`/`.xlsx` first.
+
+---
+
+### `rustfs_upload_file`
+
+Upload text content to RustFS and save it under a given storage key.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `key` | string | yes | Filename/path to store as (e.g. `notes.md`, `output/report.txt`) |
+| `content` | string | yes | Full text content to save |
+| `bucket` | string | no | Target bucket. Defaults to first configured bucket. |
+
+**Supported upload formats:**
+
+| Format | Extensions |
+|--------|-----------|
+| Plain text | txt, md, csv, log, json, yaml, toml, xml, html, and most source files |
+| Source code | go, py, rs, java, js, ts, c, cpp, h, sh, sql, graphql, tf |
+
+> **Note:** Binary formats (PDF, DOCX, XLSX) cannot be uploaded — the LLM sends text only.
 
 ## Architecture
 
@@ -114,7 +144,7 @@ Fetch a file from RustFS by storage key and return its extracted text content.
 │                 │              │  │ S3 Client   │  │──► RustFS
 │                 │              │  └─────────────┘  │
 │                 │              │  ┌─────────────┐  │
-│                 │              │  │ Extractor   │  │
+│                 │              │  │  Extractor  │  │
 │                 │              │  │ pdf/docx/   │  │
 │                 │              │  │ xlsx/text   │  │
 │                 │              │  └─────────────┘  │

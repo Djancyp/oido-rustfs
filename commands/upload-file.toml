@@ -1,0 +1,14 @@
+name = "upload-file"
+description = "Upload text content to RustFS storage under a given key."
+
+prompt = """
+Upload the following content to RustFS using the rustfs_upload_file tool with key={{key}}.
+If bucket is provided, pass it as the bucket parameter.
+Content to upload: {{content}}
+Report back the upload confirmation.
+"""
+
+[parameters]
+key = { type = "string", description = "Storage key to save the file as (e.g. notes.md, output.txt)", required = true }
+content = { type = "string", description = "Text content to upload", required = true }
+bucket = { type = "string", description = "Bucket to upload to (optional, defaults to first configured bucket)", required = false }

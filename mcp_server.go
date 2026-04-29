@@ -18,6 +18,12 @@ type ReadFileArgs struct {
 	Bucket string `json:"bucket,omitempty" jsonschema:"Bucket name (optional, overrides default bucket)"`
 }
 
+type UploadFileArgs struct {
+	Key     string `json:"key" jsonschema:"Storage key to save the file as (e.g. 'notes.md')"`
+	Content string `json:"content" jsonschema:"Text content to upload"`
+	Bucket  string `json:"bucket,omitempty" jsonschema:"Bucket name (optional, uses default bucket)"`
+}
+
 func RunMCPServer() {
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -37,8 +43,26 @@ func RunMCPServer() {
 	}, nil)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "rustfs_read_file",
-		Description: "Read a file from RustFS object storage and return its text content. Supports txt, md, csv, pdf, docx, xlsx, and most plain-text formats. AUTO-TRIGGER: call this tool automatically whenever the user message contains an attached file reference in the format 'Attached files: - <filename> (storage key: <key>)' — use the storage key as the key parameter.",
+		Name: "rustfs_upload_file",
+		Description: `Upload text content to RustFS object storage and save it under the given key.
+Use this tool when the user wants to save, store, export, or write content to a file.
+The content type is inferred from the file extension (e.g. .md → markdown, .csv → CSV, .json → JSON).
+Supported formats: txt, md, csv, json, yaml, toml, xml, html, js, ts, go, py, rs, sql, and most plain-text source files.
+Parameters:
+  - key (required): filename/path to store as, e.g. "notes.md" or "output/report.txt"
+  - content (required): full text content to save
+  - bucket (optional): target bucket; defaults to the first configured bucket`,
+	}, handler.HandleUploadFile)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "rustfs_read_file",
+		Description: `Read a file from RustFS object storage and return its full text content for use in the conversation.
+AUTO-TRIGGER: call this tool automatically whenever the user message contains an attached file reference in the format "Attached files: - <filename> (storage key: <key>)" — extract the storage key and use it as the key parameter without asking the user.
+Supports automatic text extraction for: txt, md, csv, json, yaml, toml, xml, html, source code files, PDF, DOCX, and XLSX.
+Content is truncated at ~1M tokens if the file is very large.
+Parameters:
+  - key (required): storage key of the file, e.g. "main.go" or "reports/q1.pdf"
+  - bucket (optional): bucket to read from; if omitted, searches all configured buckets in order and returns the first match`,
 	}, handler.HandleReadFile)
 
 	ctx := context.Background()
@@ -87,6 +111,36 @@ func (h *MCPHandler) HandleReadFile(ctx context.Context, _ *mcp.ServerSession, p
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			&mcp.TextContent{Text: result},
+		},
+	}, nil
+}
+
+func (h *MCPHandler) HandleUploadFile(ctx context.Context, _ *mcp.ServerSession, params *mcp.CallToolParamsFor[UploadFileArgs]) (*mcp.CallToolResult, error) {
+	args := params.Arguments
+
+	if args.Key == "" {
+		return errResult("key parameter is required"), nil
+	}
+	if args.Content == "" {
+		return errResult("content parameter is required"), nil
+	}
+
+	bucket := args.Bucket
+	if bucket == "" {
+		bucket = h.cfg.DefaultBucket
+	}
+
+	if !h.cfg.IsAllowedBucket(bucket) {
+		return errResult(fmt.Sprintf("bucket %q not in allowed list: %v", bucket, h.cfg.Buckets)), nil
+	}
+
+	if err := h.storage.PutObject(ctx, bucket, args.Key, args.Content); err != nil {
+		return errResult(fmt.Sprintf("failed to upload %s/%s: %v", bucket, args.Key, err)), nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Uploaded %s to bucket %s (%d bytes)", args.Key, bucket, len(args.Content))},
 		},
 	}, nil
 }
