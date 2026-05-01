@@ -1,0 +1,24 @@
+name = "save-text"
+description = "Save text content as a file in RustFS storage. Auto-generates filename from content. Detects format (markdown, code, plain text, csv, json, etc.)."
+
+prompt = """
+Save the following text content to RustFS storage using the rustfs_upload_file tool.
+
+Generate a filename based on the content:
+- If content has markdown formatting (# headings, **bold**, lists, links) → use .md extension
+- If content looks like source code (imports, functions, classes) → detect language and use appropriate extension (.py, .js, .go, .rs, .ts, .sql, etc.)
+- If content is structured data (CSV, JSON, YAML, XML, TOML) → use matching extension
+- If content starts with a title or heading → use it as filename (sanitized, snake_case or kebab-case)
+- Otherwise → use first line or a short summary as filename with .txt extension
+
+If the user provided a filename hint, respect it. Otherwise generate one.
+
+The content parameter should contain the full text to save.
+{% if filename %}Use filename/extension hint: {{filename}}{% endif %}
+{% if bucket %}Save to bucket: {{bucket}}{% endif %}
+"""
+
+[parameters]
+content = { type = "string", description = "Text content to save as a file", required = true }
+filename = { type = "string", description = "Optional filename hint (extension determines format)", required = false }
+bucket = { type = "string", description = "Bucket to save to (optional, uses default)", required = false }

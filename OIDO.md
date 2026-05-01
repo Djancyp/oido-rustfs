@@ -52,6 +52,29 @@ package main
 - User asks to read or analyze a file stored in RustFS
 - User wants to review document content (PDF, DOCX, XLSX)
 
+### `rustfs_save_text` (via `/save-text`)
+Save user-provided text as a file in RustFS. Auto-generates filename from content.
+
+**Parameters:**
+- `content` (string, required): Full text to save.
+- `filename` (string, optional): Hint for filename/extension. Overrides auto-detection.
+- `bucket` (string, optional): Target bucket. Default: first configured bucket.
+
+**Filename generation rules (when no `filename` given):**
+1. Respect explicit filename if user provides it
+2. Detect format from content — markdown (`.md`), code (`.py`/`.js`/`.go`/etc), structured data (`.csv`/`.json`/`.yaml`/`.toml`/`.xml`), plain text (`.txt`)
+3. Use first heading or title line as filename stem, sanitize to snake_case
+4. If no heading, use first line or short summary (max 5 words, truncated)
+
+**Format detection:**
+- Starts with `# ` or `## ` or has markdown syntax → `.md`
+- Contains `import`, `func`, `class`, `def `, `fn ` → detect language, use `.go`/`.py`/`.rs`/`.ts`/`.js`
+- Looks like CSV (comma-aligned rows) → `.csv`
+- Valid JSON/parseable → `.json`
+- Has `---` frontmatter or `key: value` pattern → `.yaml`
+- Has `[table]` sections → `.toml`
+- Default → `.txt`
+
 ## Notes
 
 - **Default bucket**: `chat-attachments` (first value in `OIDO_RUSTFS_BUCKET`)
