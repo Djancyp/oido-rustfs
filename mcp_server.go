@@ -96,19 +96,16 @@ Parameters:
 	ctx := context.Background()
 	log.Println("Oido RustFS MCP Server starting on stdio...")
 
-	if err := server.Run(ctx, mcp.NewStdioTransport()); err != nil {
+	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil {
 		log.Fatalf("MCP server error: %v", err)
 	}
 }
 
-func (h *MCPHandler) HandleReadFile(ctx context.Context, _ *mcp.ServerSession, params *mcp.CallToolParamsFor[ReadFileArgs]) (*mcp.CallToolResult, error) {
-	args := params.Arguments
-
+func (h *MCPHandler) HandleReadFile(ctx context.Context, _ *mcp.CallToolRequest, args ReadFileArgs) (*mcp.CallToolResult, any, error) {
 	if args.Key == "" {
-		return errResult("key parameter is required"), nil
+		return errResult("key parameter is required"), nil, nil
 	}
 
-	// If bucket explicitly specified, try that one only.
 	buckets := h.cfg.Buckets
 	if args.Bucket != "" {
 		buckets = []string{args.Bucket}
@@ -126,12 +123,12 @@ func (h *MCPHandler) HandleReadFile(ctx context.Context, _ *mcp.ServerSession, p
 	}
 
 	if foundBucket == "" {
-		return errResult(fmt.Sprintf("%q not found in any bucket: %v", args.Key, h.cfg.Buckets)), nil
+		return errResult(fmt.Sprintf("%q not found in any bucket: %v", args.Key, h.cfg.Buckets)), nil, nil
 	}
 
 	text, err := ExtractText(data, args.Key)
 	if err != nil {
-		return errResult(fmt.Sprintf("failed to extract text from %s: %v", args.Key, err)), nil
+		return errResult(fmt.Sprintf("failed to extract text from %s: %v", args.Key, err)), nil, nil
 	}
 
 	result := fmt.Sprintf("File: %s (bucket: %s)\n\n%s", args.Key, foundBucket, text)
@@ -140,17 +137,15 @@ func (h *MCPHandler) HandleReadFile(ctx context.Context, _ *mcp.ServerSession, p
 		Content: []mcp.Content{
 			&mcp.TextContent{Text: result},
 		},
-	}, nil
+	}, nil, nil
 }
 
-func (h *MCPHandler) HandleUploadFile(ctx context.Context, _ *mcp.ServerSession, params *mcp.CallToolParamsFor[UploadFileArgs]) (*mcp.CallToolResult, error) {
-	args := params.Arguments
-
+func (h *MCPHandler) HandleUploadFile(ctx context.Context, _ *mcp.CallToolRequest, args UploadFileArgs) (*mcp.CallToolResult, any, error) {
 	if args.Key == "" {
-		return errResult("key parameter is required"), nil
+		return errResult("key parameter is required"), nil, nil
 	}
 	if args.Content == "" {
-		return errResult("content parameter is required"), nil
+		return errResult("content parameter is required"), nil, nil
 	}
 
 	bucket := args.Bucket
@@ -159,25 +154,23 @@ func (h *MCPHandler) HandleUploadFile(ctx context.Context, _ *mcp.ServerSession,
 	}
 
 	if !h.cfg.IsAllowedBucket(bucket) {
-		return errResult(fmt.Sprintf("bucket %q not in allowed list: %v", bucket, h.cfg.Buckets)), nil
+		return errResult(fmt.Sprintf("bucket %q not in allowed list: %v", bucket, h.cfg.Buckets)), nil, nil
 	}
 
 	if err := h.storage.PutObject(ctx, bucket, args.Key, args.Content); err != nil {
-		return errResult(fmt.Sprintf("failed to upload %s/%s: %v", bucket, args.Key, err)), nil
+		return errResult(fmt.Sprintf("failed to upload %s/%s: %v", bucket, args.Key, err)), nil, nil
 	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			&mcp.TextContent{Text: fmt.Sprintf("Uploaded %s to bucket %s (%d bytes)", args.Key, bucket, len(args.Content))},
 		},
-	}, nil
+	}, nil, nil
 }
 
-func (h *MCPHandler) HandleSearchFiles(ctx context.Context, _ *mcp.ServerSession, params *mcp.CallToolParamsFor[SearchFilesArgs]) (*mcp.CallToolResult, error) {
-	args := params.Arguments
-
+func (h *MCPHandler) HandleSearchFiles(ctx context.Context, _ *mcp.CallToolRequest, args SearchFilesArgs) (*mcp.CallToolResult, any, error) {
 	if args.Pattern == "" {
-		return errResult("pattern parameter is required"), nil
+		return errResult("pattern parameter is required"), nil, nil
 	}
 
 	maxRes := args.MaxResults
@@ -191,7 +184,7 @@ func (h *MCPHandler) HandleSearchFiles(ctx context.Context, _ *mcp.ServerSession
 	buckets := h.cfg.Buckets
 	if args.Bucket != "" {
 		if !h.cfg.IsAllowedBucket(args.Bucket) {
-			return errResult(fmt.Sprintf("bucket %q not in allowed list: %v", args.Bucket, h.cfg.Buckets)), nil
+			return errResult(fmt.Sprintf("bucket %q not in allowed list: %v", args.Bucket, h.cfg.Buckets)), nil, nil
 		}
 		buckets = []string{args.Bucket}
 	}
@@ -258,7 +251,7 @@ done:
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: fmt.Sprintf("No files matching pattern %q", args.Pattern)},
 			},
-		}, nil
+		}, nil, nil
 	}
 
 	sort.Slice(matches, func(i, j int) bool {
@@ -287,7 +280,7 @@ done:
 		Content: []mcp.Content{
 			&mcp.TextContent{Text: sb.String()},
 		},
-	}, nil
+	}, nil, nil
 }
 
 func deriveListPrefix(pattern string) string {
