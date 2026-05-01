@@ -76,6 +76,35 @@ func contentTypeForKey(key string) string {
 	return "text/plain; charset=utf-8"
 }
 
+type ObjectInfo struct {
+	Key          string
+	Size         int64
+	LastModified string
+}
+
+func (s *StorageClient) ListObjects(ctx context.Context, bucket, prefix string) ([]ObjectInfo, error) {
+	opts := minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+	}
+
+	var objects []ObjectInfo
+	for obj := range s.client.ListObjects(ctx, bucket, opts) {
+		if obj.Err != nil {
+			return nil, fmt.Errorf("list %s/%s: %w", bucket, prefix, obj.Err)
+		}
+		if obj.Key == "" || obj.Key[len(obj.Key)-1] == '/' {
+			continue
+		}
+		objects = append(objects, ObjectInfo{
+			Key:          obj.Key,
+			Size:         obj.Size,
+			LastModified: obj.LastModified.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return objects, nil
+}
+
 func (s *StorageClient) PutObject(ctx context.Context, bucket, key, content string) error {
 	r := strings.NewReader(content)
 	_, err := s.client.PutObject(ctx, bucket, key, r, int64(len(content)), minio.PutObjectOptions{

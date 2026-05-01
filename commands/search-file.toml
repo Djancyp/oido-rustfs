@@ -1,0 +1,14 @@
+name = "search-file"
+description = "Search for files in RustFS storage by key pattern and optionally by content. Glob patterns supported (e.g. *.md, reports/*, budget*)."
+
+prompt = """
+Search for files matching pattern {{pattern}} using the rustfs_search_files tool.
+{% if query %}Filter files containing the text "{{query}}" within their content.{% endif %}
+{% if bucket %}Restrict search to bucket {{bucket}}.{% endif %}
+Show the full content of each matching file returned.
+"""
+
+[parameters]
+pattern = { type = "string", description = "Glob pattern or prefix to match keys (e.g. *.md, reports/*, budget)", required = true }
+query = { type = "string", description = "Optional text to search for within file contents (case-insensitive)", required = false }
+bucket = { type = "string", description = "Bucket to search in (optional, searches all configured buckets)", required = false }

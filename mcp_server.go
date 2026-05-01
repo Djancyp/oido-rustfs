@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path"
+	"sort"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -23,6 +26,18 @@ type UploadFileArgs struct {
 	Content string `json:"content" jsonschema:"Text content to upload"`
 	Bucket  string `json:"bucket,omitempty" jsonschema:"Bucket name (optional, uses default bucket)"`
 }
+
+type SearchFilesArgs struct {
+	Pattern    string `json:"pattern" jsonschema:"Glob pattern or prefix to match object keys (e.g. '*.md', 'reports/*', 'budget*'). No wildcards = prefix match."`
+	Query      string `json:"query,omitempty" jsonschema:"Optional text to search for within file contents (case-insensitive)"`
+	Bucket     string `json:"bucket,omitempty" jsonschema:"Bucket to search in (optional, searches all configured buckets)"`
+	MaxResults int    `json:"max_results,omitempty" jsonschema:"Maximum results to return (default 20, max 50)"`
+}
+
+const (
+	defaultMaxResults = 20
+	maxMaxResults     = 50
+)
 
 func RunMCPServer() {
 	cfg, err := LoadConfig()
@@ -64,6 +79,19 @@ Parameters:
   - key (required): storage key of the file, e.g. "main.go" or "reports/q1.pdf"
   - bucket (optional): bucket to read from; if omitted, searches all configured buckets in order and returns the first match`,
 	}, handler.HandleReadFile)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name: "rustfs_search_files",
+		Description: `Search for files in RustFS object storage by key pattern and optionally by content.
+Use this tool when the user asks to find, search, list, or look up files in storage.
+Patterns with wildcards (*, ?, [...]) use glob matching. Patterns without wildcards match as prefix (all keys starting with the string).
+Set 'query' to search within file contents (grep-like). Returns full text of matching files.
+Parameters:
+  - pattern (required): glob pattern or prefix to match keys, e.g. "*.md", "reports/*", "budget"
+  - query (optional): case-insensitive content search within matching files
+  - bucket (optional): restrict search to one bucket
+  - max_results (optional): max files to return (default 20, max 50)`,
+	}, handler.HandleSearchFiles)
 
 	ctx := context.Background()
 	log.Println("Oido RustFS MCP Server starting on stdio...")
@@ -143,6 +171,137 @@ func (h *MCPHandler) HandleUploadFile(ctx context.Context, _ *mcp.ServerSession,
 			&mcp.TextContent{Text: fmt.Sprintf("Uploaded %s to bucket %s (%d bytes)", args.Key, bucket, len(args.Content))},
 		},
 	}, nil
+}
+
+func (h *MCPHandler) HandleSearchFiles(ctx context.Context, _ *mcp.ServerSession, params *mcp.CallToolParamsFor[SearchFilesArgs]) (*mcp.CallToolResult, error) {
+	args := params.Arguments
+
+	if args.Pattern == "" {
+		return errResult("pattern parameter is required"), nil
+	}
+
+	maxRes := args.MaxResults
+	if maxRes <= 0 {
+		maxRes = defaultMaxResults
+	}
+	if maxRes > maxMaxResults {
+		maxRes = maxMaxResults
+	}
+
+	buckets := h.cfg.Buckets
+	if args.Bucket != "" {
+		if !h.cfg.IsAllowedBucket(args.Bucket) {
+			return errResult(fmt.Sprintf("bucket %q not in allowed list: %v", args.Bucket, h.cfg.Buckets)), nil
+		}
+		buckets = []string{args.Bucket}
+	}
+
+	prefix := deriveListPrefix(args.Pattern)
+	hasWildcards := strings.ContainsAny(args.Pattern, "*?[")
+
+	type match struct {
+		bucket  string
+		key     string
+		content string
+	}
+
+	var matches []match
+
+	for _, bucket := range buckets {
+		objects, err := h.storage.ListObjects(ctx, bucket, prefix)
+		if err != nil {
+			log.Printf("Error listing bucket %s: %v", bucket, err)
+			continue
+		}
+
+		for _, obj := range objects {
+			if len(matches) >= maxRes {
+				goto done
+			}
+
+			if hasWildcards {
+				if ok, _ := path.Match(args.Pattern, obj.Key); !ok {
+					continue
+				}
+			} else {
+				if !strings.HasPrefix(obj.Key, args.Pattern) {
+					continue
+				}
+			}
+
+			if args.Query == "" {
+				matches = append(matches, match{bucket: bucket, key: obj.Key})
+				continue
+			}
+
+			data, err := h.storage.GetObject(ctx, bucket, obj.Key)
+			if err != nil {
+				continue
+			}
+
+			text, err := ExtractText(data, obj.Key)
+			if err != nil {
+				continue
+			}
+
+			if !caseInsensitiveContains(text, args.Query) {
+				continue
+			}
+
+			matches = append(matches, match{bucket: bucket, key: obj.Key, content: text})
+		}
+	}
+done:
+
+	if len(matches) == 0 {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No files matching pattern %q", args.Pattern)},
+			},
+		}, nil
+	}
+
+	sort.Slice(matches, func(i, j int) bool {
+		return matches[i].key < matches[j].key
+	})
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Found %d file(s) matching pattern %q", len(matches), args.Pattern))
+	if args.Query != "" {
+		sb.WriteString(fmt.Sprintf(" with query %q", args.Query))
+	}
+	sb.WriteString(":\n")
+
+	for _, m := range matches {
+		sb.WriteString("---\n")
+		sb.WriteString(fmt.Sprintf("File: %s (bucket: %s)\n", m.key, m.bucket))
+		if m.content != "" {
+			sb.WriteString(m.content)
+			if m.content[len(m.content)-1] != '\n' {
+				sb.WriteByte('\n')
+			}
+		}
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil
+}
+
+func deriveListPrefix(pattern string) string {
+	for i, r := range pattern {
+		if r == '*' || r == '?' || r == '[' {
+			return pattern[:i]
+		}
+	}
+	return pattern
+}
+
+func caseInsensitiveContains(s, substr string) bool {
+	s, substr = strings.ToLower(s), strings.ToLower(substr)
+	return strings.Contains(s, substr)
 }
 
 func errResult(msg string) *mcp.CallToolResult {

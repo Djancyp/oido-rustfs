@@ -15,6 +15,22 @@ Fetch a file from RustFS by storage key and return its extracted text content.
 
 **Returns:** Full text content of the file, truncated at 4M characters (~1M tokens) if too large.
 
+### `rustfs_search_files`
+Search for files by key pattern and optionally by content.
+
+**Parameters:**
+- `pattern` (string, required): Glob pattern or prefix. Wildcards `*`, `?`, `[...]` supported. No wildcards = prefix match (all keys starting with string). Examples: `"*.md"`, `"reports/*"`, `"budget"`, `"2024/report*"`.
+- `query` (string, optional): Case-insensitive content search. If set, only files containing this text are returned.
+- `bucket` (string, optional): Restrict search to one bucket. Default: all configured buckets.
+- `max_results` (int, optional): Max results (default 20, max 50).
+
+**Returns:** Full text of each matching file.
+
+**Best practices:**
+- Use specific patterns to avoid listing too many objects
+- Narrow by bucket when possible
+- Query searches within extracted text of matching files
+
 ## Example Usage
 
 ```
